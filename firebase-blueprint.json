@@ -1,0 +1,191 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Player progression, points, shop inventory, completed maps, and local preferences.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "points": {
+          "type": "integer",
+          "description": "Total career score points."
+        },
+        "candyCoins": {
+          "type": "integer",
+          "description": "Spendable currency earned by surviving and collecting gifts."
+        },
+        "unlockedItems": {
+          "type": "array",
+          "description": "Shop item IDs purchased by the player (max 32)."
+        },
+        "equippedItems": {
+          "type": "array",
+          "description": "Active gear/skin IDs equipped by the player (max 16)."
+        },
+        "completedMaps": {
+          "type": "array",
+          "description": "Campaign map IDs completed by the player (max 16)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "displayName",
+        "points",
+        "candyCoins",
+        "unlockedItems",
+        "equippedItems",
+        "completedMaps",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "LeaderboardEntry": {
+      "title": "LeaderboardEntry",
+      "description": "Immutable verified run record submitted upon escaping a horror map.",
+      "type": "object",
+      "properties": {
+        "entryId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "playerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "mapId": {
+          "type": "string",
+          "enum": ["village", "forest", "factory", "mansion", "station", "custom"]
+        },
+        "score": {
+          "type": "integer"
+        },
+        "timeSeconds": {
+          "type": "integer"
+        },
+        "giftsCollected": {
+          "type": "integer"
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["solo", "coop"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "entryId",
+        "uid",
+        "playerName",
+        "mapId",
+        "score",
+        "timeSeconds",
+        "giftsCollected",
+        "mode",
+        "createdAt"
+      ]
+    },
+    "CustomMap": {
+      "title": "CustomMap",
+      "description": "User-created 16x16 custom horror map layout built in the Map Builder.",
+      "type": "object",
+      "properties": {
+        "mapId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "authorName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "title": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 48
+        },
+        "theme": {
+          "type": "string",
+          "enum": ["village", "forest", "factory", "mansion", "station"]
+        },
+        "monsterType": {
+          "type": "string",
+          "enum": ["evil_santa", "frozen_snowman", "naughty_elf", "christmas_shadow"]
+        },
+        "gridRows": {
+          "type": "array",
+          "description": "16 strings of 16 characters each representing the custom map tile grid."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "mapId",
+        "ownerId",
+        "authorName",
+        "title",
+        "theme",
+        "monsterType",
+        "gridRows",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Owner-isolated player progression, currency, shop inventory, and unlocked campaign maps."
+    },
+    "/leaderboard/{entryId}": {
+      "schema": { "$ref": "#/entities/LeaderboardEntry" },
+      "description": "Publicly readable leaderboard scores created by verified signed-in players."
+    },
+    "/customMaps/{mapId}": {
+      "schema": { "$ref": "#/entities/CustomMap" },
+      "description": "Community custom horror maps playable by anyone, editable/deletable only by owner."
+    }
+  }
+}

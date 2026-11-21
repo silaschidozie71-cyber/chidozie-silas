@@ -1,0 +1,6 @@
+{
+  "name": "Hollow Eve: Midnight Express",
+  "description": "A 3D Christmas survival horror game featuring Evil Santa, Frozen Snowman, Naughty Elf, and Christmas Shadow across 5 haunted winter maps, puzzles, co-op multiplayer, map builder, shop, and global leaderboards.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

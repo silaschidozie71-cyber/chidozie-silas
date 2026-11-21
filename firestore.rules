@@ -1,0 +1,237 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll([
+          'uid',
+          'displayName',
+          'points',
+          'candyCoins',
+          'unlockedItems',
+          'equippedItems',
+          'completedMaps',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid',
+          'displayName',
+          'points',
+          'candyCoins',
+          'unlockedItems',
+          'equippedItems',
+          'completedMaps',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.uid is string
+        && data.uid == request.auth.uid
+        && data.uid == userId
+        && data.displayName is string
+        && data.displayName.size() >= 1
+        && data.displayName.size() <= 32
+        && data.points is int
+        && data.points >= 0
+        && data.points <= 10000000
+        && data.candyCoins is int
+        && data.candyCoins >= 0
+        && data.candyCoins <= 1000000
+        && data.unlockedItems is list
+        && data.unlockedItems.size() <= 32
+        && (data.unlockedItems.size() == 0 || (data.unlockedItems[0] is string && data.unlockedItems[0].size() <= 48))
+        && data.equippedItems is list
+        && data.equippedItems.size() <= 16
+        && (data.equippedItems.size() == 0 || (data.equippedItems[0] is string && data.equippedItems[0].size() <= 48))
+        && data.completedMaps is list
+        && data.completedMaps.size() <= 16
+        && (data.completedMaps.size() == 0 || (data.completedMaps[0] is string && data.completedMaps[0].size() <= 32))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidLeaderboardEntry(data, entryId) {
+      return data.keys().hasAll([
+          'entryId',
+          'uid',
+          'playerName',
+          'mapId',
+          'score',
+          'timeSeconds',
+          'giftsCollected',
+          'mode',
+          'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'entryId',
+          'uid',
+          'playerName',
+          'mapId',
+          'score',
+          'timeSeconds',
+          'giftsCollected',
+          'mode',
+          'createdAt'
+        ])
+        && data.entryId is string
+        && data.entryId == entryId
+        && data.uid is string
+        && data.uid == request.auth.uid
+        && data.playerName is string
+        && data.playerName.size() >= 1
+        && data.playerName.size() <= 32
+        && data.mapId is string
+        && data.mapId in ['village', 'forest', 'factory', 'mansion', 'station', 'custom']
+        && data.score is int
+        && data.score >= 0
+        && data.score <= 500000
+        && data.timeSeconds is int
+        && data.timeSeconds >= 5
+        && data.timeSeconds <= 86400
+        && data.giftsCollected is int
+        && data.giftsCollected >= 0
+        && data.giftsCollected <= 100
+        && data.mode is string
+        && data.mode in ['solo', 'coop']
+        && data.createdAt is timestamp;
+    }
+
+    function isValidCustomMap(data, mapId) {
+      return data.keys().hasAll([
+          'mapId',
+          'ownerId',
+          'authorName',
+          'title',
+          'theme',
+          'monsterType',
+          'gridRows',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'mapId',
+          'ownerId',
+          'authorName',
+          'title',
+          'theme',
+          'monsterType',
+          'gridRows',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.mapId is string
+        && data.mapId == mapId
+        && data.ownerId is string
+        && data.ownerId == request.auth.uid
+        && data.authorName is string
+        && data.authorName.size() >= 1
+        && data.authorName.size() <= 32
+        && data.title is string
+        && data.title.size() >= 2
+        && data.title.size() <= 48
+        && data.theme is string
+        && data.theme in ['village', 'forest', 'factory', 'mansion', 'station']
+        && data.monsterType is string
+        && data.monsterType in ['evil_santa', 'frozen_snowman', 'naughty_elf', 'christmas_shadow']
+        && data.gridRows is list
+        && data.gridRows.size() == 16
+        && data.gridRows[0] is string
+        && data.gridRows[0].size() == 16
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isSignedIn() && request.auth.uid == userId;
+      allow list: if false;
+      allow create: if isValidId(userId)
+        && isSignedIn()
+        && request.auth.uid == userId
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isSignedIn()
+        && request.auth.uid == userId
+        && isValidUserProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'displayName',
+          'points',
+          'candyCoins',
+          'unlockedItems',
+          'equippedItems',
+          'completedMaps',
+          'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    match /leaderboard/{entryId} {
+      allow get: if isValidId(entryId);
+      allow list: if true;
+      allow create: if isValidId(entryId)
+        && isSignedIn()
+        && isValidLeaderboardEntry(incoming(), entryId)
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isValidId(entryId)
+        && isSignedIn()
+        && existing().uid == request.auth.uid;
+    }
+
+    match /customMaps/{mapId} {
+      allow get: if isValidId(mapId);
+      allow list: if true;
+      allow create: if isValidId(mapId)
+        && isSignedIn()
+        && isValidCustomMap(incoming(), mapId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(mapId)
+        && isSignedIn()
+        && existing().ownerId == request.auth.uid
+        && isValidCustomMap(incoming(), mapId)
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'authorName',
+          'title',
+          'theme',
+          'monsterType',
+          'gridRows',
+          'updatedAt'
+        ]);
+      allow delete: if isValidId(mapId)
+        && isSignedIn()
+        && existing().ownerId == request.auth.uid;
+    }
+
+    match /test/connection {
+      allow get: if true;
+    }
+  }
+}
